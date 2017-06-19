@@ -7,7 +7,7 @@ import linear_classifier as lc
 
 
 
-def read_data(f_name = 'mushrooms.csv'):
+def read_data(f_name = 'min_tit.csv'):
     file = open(f_name)
     reader = csv.reader(file)
     data = []
@@ -15,21 +15,43 @@ def read_data(f_name = 'mushrooms.csv'):
         data.append(row)
     data = np.array(data)
     Y = data[1:,0]
-    Y = ((Y=='e')+0.)*2-1
+    code = np.unique(Y)
+    Y = ((Y==code[0])+0.)*2-1
     X = data[1:,1:]
+    # clear empty values
+    idx = np.invert(np.any(X=='',1))
+    X = X[idx,:]
+    Y = Y[idx]
     feature_names = data[0,:]
     file.close()
-    return X, Y, feature_names
+    return X, Y, feature_names, code
+
+
+
+def recode_multi_label_cats(X):
+    new_X = []
+    for x in X.T:
+        xs = np.unique(x)
+        tmp = []
+        for s in xs:
+            tmp.append((x==s)*1)
+        tmp = np.array(tmp)
+        if new_X == []:
+            new_X = tmp.T
+        else:
+            new_X = np.hstack([new_X,tmp.T])
+    return np.array(new_X)
 
 
 # get data
-X,Y,feature_names = read_data()
+X,Y,feature_names, code= read_data()
+#X = recode_multi_label_cats(X)
 
 # numer of weak learners in ensemble
 no_weak = 5
 
 # create training/testing/evaluation sets
-ratio_train = .6
+ratio_train = .3
 ratio_eval = .2
 ratio_test = 1-(ratio_train+ratio_eval)
 
@@ -45,7 +67,7 @@ learners = []
 perf_learners = []
 for lx in range(no_weak):
     x,y = train_batch.next(int(train_batch.X.shape[0]/no_weak))
-    learner = DTL.Learner()
+    learner = DTL.Learner(max_depth=2)
     learner.init_tree(x,y)
 
     x_test,y_test = test_batch.next(int(test_batch.X.shape[0]/no_weak))
@@ -54,7 +76,7 @@ for lx in range(no_weak):
     learners.append(learner)
     perf = np.mean(y_pred==y_test)
     perf_learners.append(perf)
-    print('L{1} |correct predicted: {0}'.format(perf,lx))
+    print('L{1} |correct predicted:          {0}'.format(perf,lx))
 
 learners = [l for ix,l in enumerate(learners) if perf_learners[ix] > .6]
 
@@ -103,19 +125,20 @@ for learner in learners:
     # calc performance of single tree
     perf = np.mean(np.sign(outp_learner)==np.sign(eval_Y))
     perf_trees.append(perf)
-    print('L{0} | correct in evalutation: {1}'.format(lx,perf))
+    print('L{0} | correct in evalutation:     {1}'.format(lx,perf))
     lx+=1
 
 outp_trees = np.array(outp_trees).T
 
 print('-'*10)
-print('best performing single tree: {0}'.format(np.max(perf_trees)))
+print('best performing single tree:      {0}'.format(np.max(perf_trees)))
+print('mean performance of all trees:    {0}'.format(np.mean(perf_trees)))
 
 
 pred_lin=linear_classifier.predict(outp_trees)
-print('performance linear classifier: {0}'.format(np.mean(pred_lin==eval_Y)))
+print('performance linear classifier:    {0}'.format(np.mean(pred_lin==eval_Y)))
 
 
 pred_perc=P.predict(outp_trees)
-print('performance perceptron: {0}'.format(np.mean(pred_perc==eval_Y)))
+print('performance perceptron:           {0}'.format(np.mean(pred_perc==eval_Y)))
 print()

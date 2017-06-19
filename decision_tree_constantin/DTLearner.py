@@ -1,4 +1,5 @@
 import numpy as np
+from math import log as mlog
 
 class Batch():
 	'''
@@ -12,11 +13,12 @@ class Batch():
 		self.Y = Y[perm]
 
 	def next(self, size):
-		x = self.X[:size,:]
-		y = self.Y[:size]
+		idx = np.random.permutation(self.X.shape[0])[:size]
+		x = self.X[idx,:]
+		y = self.Y[idx]
 
-		self.X = self.X[size:,:]
-		self.Y = self.Y[size:]
+		#self.X = self.X[size:,:]
+		#self.Y = self.Y[size:]
 
 		return x,y 
 
@@ -31,7 +33,7 @@ class DecisionNode:
 		self.neg_child = None
 		self.axis = axis
 		self.val = val
-		self.type = 'DN'
+		self.type = 'Decision Node'
 
 class LeafNode:
 	'''
@@ -41,7 +43,7 @@ class LeafNode:
 		self.axis = axis
 		self.val = val
 		self.label = label
-		self.type = 'LN'
+		self.type = 'Leaf Node'
 
 
 class DecisionTree:
@@ -49,9 +51,8 @@ class DecisionTree:
 	Baiscally only the root node as decision node
 	max_depth is not implemented right now
 	'''
-	def __init__(self, max_depth = 5):
+	def __init__(self):
 		self.root = DecisionNode()
-		self.max_depth = max_depth
 
 
 
@@ -60,39 +61,9 @@ class Learner:
 	The actual decision tree learner.
 	'''
 
-	def __init__(self):
+	def __init__(self, max_depth = 3):
 		self.tree = DecisionTree()
-		self.max_depth = 5
-
-	def calc_split_gains(self,X,Y):
-		'''
-		Information gain of a split is calculated based on the ratio of 
-		positive and negative examples before and after applying the split.
-		'''
-		# calculate entropy of whole dataset
-		tmp = np.mean(Y==Y[0])
-		# check if data is already only of one class:
-		if tmp == 1.0 or tmp == 0.0:
-			gloabl_entropy = 0
-		else:
-			gloabl_entropy = -tmp*np.log2(tmp)-(1-tmp)*np.log2(1-tmp)
-		# calculate information gain for every split
-		split_gains = []
-		split_val = []
-		for ix in range(X.shape[1]): # every possible split axis
-			variables = np.unique(X[:,ix]) # every possible split value
-			gains = []
-			for var in variables:
-				y = Y[X[:,ix]==var]	# find label for certain value
-				tmp = np.mean(y==y[0]) # how many remaining labels are equal
-				if tmp == 1.0 or tmp == 0.0:
-					entropy = 0
-				else:
-					entropy = -tmp*np.log2(tmp)-(1-tmp)*np.log2(1-tmp)
-				gains.append(gloabl_entropy-entropy) # information gain
-			split_gains.append(np.max(gains))
-			split_val.append(variables[np.argmax(gains)])
-		return split_gains, split_val
+		self.max_depth = max_depth
 
 	def opposite(self,x):
 		return -x
@@ -105,9 +76,55 @@ class Learner:
 		mfl = ys[np.argmax(count)]
 		return mfl
 
+	def entropy(self,Y):
+		if all(Y==Y[0]):
+			return 0
+		labels = np.unique(Y)
+		label_probs = []
+		for l in labels:
+			label_probs.append(np.mean(Y==l))
+		entropy = 0
+		for p in label_probs:
+			entropy -= p * mlog(p, len(labels))
+		return entropy
+
+
+	def information_gain(self,X,Y):
+		# first, calculate global entropy
+		global_entropy = self.entropy(Y)
+		# for each possible given class label, calculate the entropy
+		# multiply by chance to get label
+		labels = np.unique(X)
+		information = 0
+		label_gain = []
+		for label in labels:
+			p_label = np.mean(X==label)
+			per_label = self.entropy(Y[X==label]) * p_label
+			information += per_label
+			label_gain.append(per_label)
+		gain = global_entropy - information
+		best_label = labels[np.argmax(label_gain)] 
+		return gain, best_label
+
+	def get_split_gains(self,X,Y):
+		'''
+		Information gain of a split is calculated based on the ratio of 
+		positive and negative examples before and after applying the split.
+		'''
+		
+		# for each axis x in X and each feature value in x calculate the
+		# information gain
+		max_gain_per_axis = []
+		best_feature_vals = []
+		for axis in range(X.shape[1]):
+			x = X[:,axis]
+			inf_gain, label = self.information_gain(x,Y)
+			max_gain_per_axis.append(inf_gain)
+			best_feature_vals.append(label)
+		return max_gain_per_axis, best_feature_vals
 
 	def get_split(self,X,Y):
-		split_gains, split_val = self.calc_split_gains(X,Y)
+		split_gains, split_val = self.get_split_gains(X,Y)
 		axis = np.argmax(split_gains)
 		val = split_val[axis]
 		return axis, val
@@ -124,7 +141,7 @@ class Learner:
 
 		return pos_X, pos_Y, neg_X, neg_Y
 
-	def build_tree(self,X,Y,cur_node):
+	def build_tree(self,X,Y,cur_node,depth):
 		# find good split axis
 		axis, val = self.get_split(X,Y)
 		# give parameters to node
@@ -132,28 +149,34 @@ class Learner:
 		cur_node.val = val
 		# apply split
 		pos_X, pos_Y, neg_X, neg_Y = self.split_set(X,Y,axis,val)
-		# if one set only has one target, create pos/neg child as leaf node 
-		if (all(pos_Y==pos_Y[0]) or len(neg_Y) == 0):
-			cur_node.pos_child = LeafNode(np.sign(self.most_frequent_label(pos_Y)))
-		# else, create child as decision node
-		else:
-			cur_node.pos_child = DecisionNode()
-			self.build_tree(pos_X,pos_Y,cur_node.pos_child)
 
-		if len(neg_Y)==0:
-			cur_node.neg_child = LeafNode(self.opposite(pos_Y[0]))
+		if depth >= self.max_depth-1:
+			cur_node.pos_child = LeafNode(self.most_frequent_label(pos_Y))
+			cur_node.neg_child = LeafNode(self.opposite(cur_node.pos_child.label))
 			return
 
-		if (all(neg_Y==neg_Y[0]) or len(pos_Y) == 0):
-			cur_node.neg_child = LeafNode(np.sign(self.most_frequent_label(neg_Y)))
+		if pos_Y.shape[0]==0:
+			cur_node.neg_child = LeafNode(self.most_frequent_label(neg_Y))
+			cur_node.pos_child = LeafNode(self.opposite(cur_node.neg_child.label))
+			return
+		if neg_Y.shape[0]==0:
+			cur_node.pos_child = LeafNode(self.most_frequent_label(pos_Y))
+			cur_node.neg_child = LeafNode(self.opposite(cur_node.pos_child.label))
+			return
+		if all(pos_Y == pos_Y[0]):
+			cur_node.pos_child = LeafNode(pos_Y[0])
+		else:
+			cur_node.pos_child = DecisionNode()
+			self.build_tree(pos_X,pos_Y,cur_node.pos_child,depth+1)
+		if all(neg_Y == neg_Y[0]):
+			cur_node.neg_child = LeafNode(neg_Y[0])
 		else:
 			cur_node.neg_child = DecisionNode()
-			self.build_tree(neg_X,neg_Y,cur_node.neg_child)
+			self.build_tree(neg_X,neg_Y,cur_node.neg_child,depth+1)
 
-		# recursive call with pos/neg sets, iff sets not uniform
 
 	def init_tree(self,X,Y):
-		self.build_tree(X,Y,self.tree.root)
+		self.build_tree(X,Y,self.tree.root,0)
 
 
 
@@ -162,12 +185,12 @@ class Learner:
 
 
 	def recursive_print(self,node,mode,indent):
-		lead = '  '*indent
 		indent += 1
+		lead = '	'*indent
 
 		if not type(node)==LeafNode:
 			print(lead+'+-----------'.format(indent))
-			print(lead+'| type: '+node.type)
+			print(lead+'| '+ node.type)
 			print(lead+'| level: {0}'.format(indent))
 			print(lead+'| type:  '+mode)
 			print(lead+'| axis:  '+str(node.axis))
@@ -195,7 +218,7 @@ class Learner:
 
 	def print_tree(self):
 		cur_node = self.tree.root
-		self.recursive_print(cur_node,'root',1)
+		self.recursive_print(cur_node,'root',-1)
 
 	def predict(self,x):
 		n = self.tree.root
