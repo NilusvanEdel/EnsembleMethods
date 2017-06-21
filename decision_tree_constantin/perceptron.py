@@ -1,5 +1,5 @@
 import numpy as np
-from DTLearner import Batch
+from batch import Batch
 import scipy.io
 
 
@@ -10,7 +10,7 @@ class Perceptron():
 		self.tresh = 0
 		self.X = X
 		self.Y = Y
-		self.l_rate = 0.005
+		self.l_rate = 0.025
 		self.train()
 
 	def predict(self,X):
@@ -23,14 +23,20 @@ class Perceptron():
 		y_hat = np.dot(self.weights.T,x)
 		error = y-y_hat
 		gradient = (self.l_rate/2) * error * x
-		self.weights += np.squeeze(np.array([gradient]))
+		return gradient 
 
-	def train(self):
-		for ix in range(100000):
-			rx = np.random.randint(self.X.shape[0])
-			x = self.X[rx,:]
-			y = self.Y[rx]
-			self.descent(x,y)
+	def train(self,batch_size=50):
+		for ix in range(300):
+			gradients = []
+			for b in range(batch_size):
+				rx = np.random.randint(self.X.shape[0])
+				x = self.X[rx,:]
+				y = self.Y[rx]
+				gradient = self.descent(x,y)
+				gradients.append(gradient)
+			gradients = np.sum(np.array(gradients),0)
+			self.weights += (1/batch_size) * np.squeeze(np.array([gradients]))
+
 
 
 #
