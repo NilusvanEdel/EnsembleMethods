@@ -4,7 +4,7 @@ Created on Mon Jun 26 12:28:16 2017
 
 @author: Henning
 """
-
+from __future__ import division
 from ensembleMethods import BaggedLearner
 import csv
 import numpy as np
@@ -32,6 +32,32 @@ def read_data(f_name = 'mushrooms.csv'):
     file.close()
     return X, Y, feature_names,code
 
-X, Y, feature_names,code = read_data()
-learner = BaggedLearner(X, Y,"ddddddddddddddddddddddddddddddd",feature_names)
-learner.learn()
+def split_sets(X,Y,ratio_train=.4,ratio_test=.2):
+	l = Y.shape[0]
+	X_train = X[:int(l*ratio_train),:]
+	X = X[int(l*ratio_train):,:]
+	Y_train = Y[:int(l*ratio_train)]
+	Y = Y[int(l*ratio_train):]
+	X_test = X[:int(l*ratio_test),:]
+	X = X[int(l*ratio_test):,:]
+	Y_test = Y[:int(l*ratio_test)]
+	Y = Y[int(l*ratio_test):]
+	X_eval = X
+	Y_eval = Y
+
+	return X_train,Y_train,X_test,Y_test,X_eval,Y_eval
+
+X, Y, feature_names,code = read_data(f_name = "wdbc.csv")
+X_train,Y_train,X_test,Y_test,X_eval,Y_eval = split_sets(X,Y,ratio_train=.4,ratio_test=.2)
+learner = BaggedLearner(X_train, Y_train,"ccccccccccccccccccccccccccccccccccccccccc",feature_names,max_depth = 2,ensSize=10)
+
+
+errors = 0
+for i,xt in enumerate(X_test):
+    if not learner.predict(xt) == Y_test[i]:
+        errors+=1
+print(errors/X_test.shape[0])
+    
+    
+    
+    
