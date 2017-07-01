@@ -75,13 +75,17 @@ class Learner():
 	# feature_types is a list of the same length as one data point
 	# containing either a 'd' for discrete, or 'c' for continuous
 	# values. e.g. ['c']*X.shape[1] 
-    def __init__(self,X,Y,feature_types,feature_names=None,max_depth = 3):
+    def __init__(self,X,Y,feature_types,feature_names=None,max_depth = 3,beta = None):
         self.X = X
         self.Y = Y
         self.feature_types = feature_types
         self.feature_names = feature_names
         self.max_depth = max_depth
         self.init_tree(self.X,self.Y)
+        if beta == None:
+            self.beta = np.ones(X[0].size) * (1/X[0].size)
+        else:
+            self.beta = beta
 
     def init_tree(self,X,Y):
         axis, val = self.get_split(X,Y)
@@ -113,7 +117,16 @@ class Learner():
         labels = np.unique(Y)
         label_probs = []
         for l in labels:
+            """
+            old:
             label_probs.append(np.mean(Y==l))
+            """
+            for i,y in enumerate(Y):
+                cntSum = 0
+                if y == l:
+                    cntSum += self.beta[i]
+                label_probs.append(cntSum / np.sum(self.beta))
+                    
         entropy = 0
         for p in label_probs:
             entropy -= p * mlog(p, len(labels))
