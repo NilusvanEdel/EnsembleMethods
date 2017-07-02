@@ -13,8 +13,8 @@ class AdaBoost:
     def __init__(self,X,Y,feature_types,feature_names=None,max_depth = 3,ensSize=10):
         self.X = X
         self.Y = Y
-        self.learners = []
-        self.hypoWeights = []
+        self.learners = np.empty(ensSize,dtype=object)
+        self.hypoWeights = np.empty(ensSize,dtype=np.float16)
         self.feature_types = feature_types
         self.feature_names = feature_names
         self.max_depth = max_depth
@@ -22,63 +22,79 @@ class AdaBoost:
 
         self.beta = np.ones(self.N) * (1./self.N)
         for i in range(ensSize):
-            self.learn()
+            self.learn(i)
             #calculate losses
-            losses = self.loss(self.learners[-1])
+            losses = self.calcLosses(self.learners[i])
+            print(np.mean(losses))
             #compute the weighted error
             wError =  self.calcWeightedError(losses*1)
+            print("wError: ",wError)
             #compute hypothesis weight
-            self.calcHypoWeights(wError)
+            self.calcHypoWeight(wError,i)
             #update the weights beta
-            self.updateBeta(losses)
+            self.updateBeta(losses,wError,i)
+        print("hypoWeights: ", self.hypoWeights)
         
         
-    def learn(self):
+    def learn(self,i):
 
         l = Learner(self.X,self.Y,self.feature_types,self.feature_names,self.max_depth,self.beta)
-        self.learners.append(l)
+        self.learners[i] = l
+                     
+#    def predictions(self,learner):
+#        predictions = np.empty(self.N)
+#        for i,x in enumerate(self.X):
+#            predictions[i] = learner.predict(x)
+#        return predictions
         
-    def loss(self,learner):
-        predictions = np.empty((self.N,0),dtype=int)
+    def calcLosses(self,learner):
+        losses = np.empty(self.N,dtype=bool)
         for i,x in enumerate(self.X):
-            predictions[i] = learner.predict(x)
-        return np.logical_not(predictions == self.Y)
+            losses[i] = learner.predict(x) != self.Y[i]
+        return losses
     
     def calcWeightedError(self,losses):
-        return np.sum(self.beta * losses)
+        return np.dot(self.beta, losses)
     
-    def calcHypoWeights(self,wError):
-#        wError = np.float64(wError) + 0
-#        print(np.dtype(wError))
-#        print("wError ",np.float64(wError))
-#        print(np.float64(wError) is np.float64(1.0))
+    def calcHypoWeight(self,wError,i):
 
         if np.allclose(wError, 1):
             #print("in 1")
-            self.hypoWeights.append(0)
+            self.hypoWeights[i] = 0
         elif np.allclose( wError, 0):
             #TODO: was tun wenn error 0?
-            self.hypoWeights.append(10000)
+            self.hypoWeights[i] = 10000
         else:
             #print("in 3")
-            self.hypoWeights.append(0.5 * np.math.log((1-wError) / wError))
+            self.hypoWeights[i] = 0.5 * np.math.log((1-wError) / wError)
         
-    def updateBeta(self,losses):
+    def updateBeta(self,losses,wError,i):
         #for worngly classified beta:
-        self.beta[losses] *= np.exp(self.hypoWeights[-1])
+        self.beta[losses] *= np.exp(self.hypoWeights[i])
+        #self.beta[losses] /= 2*wError
+                 
         #for correctly classified beta:
-        self.beta[np.logical_not(losses)] *= np.exp(-self.hypoWeights[-1])
+        self.beta[np.logical_not(losses)] *= np.exp(-self.hypoWeights[i])
+        #self.beta[np.logical_not(losses)] /= 2*(1-wError)
         #normalize
         self.beta /= np.sum(self.beta)
 
     def predict(self,x):
-        predictions = []
-        for learner in self.learners:
-            predictions.append(learner.predict(x))
-        return self.voting(predictions)
+        predictions = np.empty_like(self.learners)
+        for i,learner in enumerate(self.learners):
+            predictions[i] = learner.predict(x)
+        #print("single predictions ",predictions)
+        pred = self.voting(predictions)
+        #print("pred out: ", pred)
+        return pred
     
     def voting(self,predictions):
-        return max(set(predictions), key=predictions.count)
+        preSet = set(predictions)
+        lWeights = np.empty(len(preSet),dtype=np.float64)
+        for i,l in enumerate(preSet):
+            lWeight = np.sum(self.hypoWeights[predictions == l])
+            lWeights[i] = lWeight
+        return list(preSet)[np.argmax(lWeights)]
 
 class BaggedLearner:
     

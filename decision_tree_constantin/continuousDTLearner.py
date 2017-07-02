@@ -37,16 +37,19 @@ class DecisionNode():
                 return self.neg_child
 
 
-    def split(self,X,Y):
+    def split(self,X,Y,beta):
         if self.type == 'DDN':
             ix = X[:,self.axis]==self.val
             jx = np.invert(ix)
 
             pos_X = X[ix]
             neg_X = X[jx]
-
+            
             pos_Y = Y[ix]
             neg_Y = Y[jx]
+            
+            pos_beta = beta[ix]
+            neg_beta = beta[jx]
         elif self.type == 'CDN':
             self.val = float(self.val)
             x = np.array([np.float(i) for i in X[:,self.axis]])
@@ -56,11 +59,13 @@ class DecisionNode():
 
             pos_X = X[ix]
             neg_X = X[jx]
-
+            
             pos_Y = Y[ix]
             neg_Y = Y[jx]
-
-        return pos_X, pos_Y, neg_X, neg_Y
+            
+            pos_beta = beta[ix]
+            neg_beta = beta[jx]
+        return pos_X, pos_Y, neg_X, neg_Y,pos_beta,neg_beta
 
 
 class DecisionTree():
@@ -83,35 +88,38 @@ class Learner():
         self.feature_types = feature_types
         self.feature_names = feature_names
         self.max_depth = max_depth
+        print(X.shape)
+        print(Y.shape)
         if beta == None:
-            self.beta = np.ones(X[0].size)
+            beta = np.ones(X.shape[0]) / X.shape[0]
         else:
-            self.beta = beta
-        self.init_tree(self.X,self.Y)
+            beta = beta
+        self.init_tree(self.X,self.Y,beta)
         
-    def init_tree(self,X,Y):
-        axis, val = self.get_split(X,Y)
+    def init_tree(self,X,Y,beta):
+        axis, val = self.get_split(X,Y,beta)
         root = DecisionNode()
         if self.feature_types[axis] == 'c':
             root.type = 'DDN'
         elif self.feature_types[axis] == 'd':
             root.type = 'CDN'
         self.root = root 
-        self.build_tree(X,Y,self.root,0)
+        self.build_tree(X,Y,self.root,0,beta)
 
 
     def opposite(self,x):
         return -x
 
-    def most_frequent_label(self,Y):
+    def most_frequent_label(self,Y,beta):
         ys = np.unique(Y)
         count = []
         for y in ys:
-            count.append(np.sum(Y==y))
+            count.append(np.sum(beta[Y==y]))
+#            count.append(np.sum(Y==y))
         mfl = ys[np.argmax(count)]
         return mfl
 
-    def entropy(self,Y):
+    def entropy(self,Y,beta):
         if Y.shape[0] == 0:
             return 0
         if all(Y==Y[0]):
@@ -119,17 +127,17 @@ class Learner():
         labels = np.unique(Y)
         label_probs = []
         for l in labels:
-
-            #label_probs.append(np.mean(Y==l))
+#            label_probs.append(np.mean(Y==l))
             cntSum = 0
             for i,y in enumerate(Y):
                 if y == l:
-                    cntSum += self.beta[i]
-            label_probs.append(cntSum / np.sum(self.beta))
+                    cntSum += beta[i]
+            label_probs.append(cntSum / np.sum(beta))
                     
         entropy = 0
         for p in label_probs:
-            entropy -= p * mlog(p, len(labels))
+            #entropy -= p * mlog(p, len(labels))
+            entropy -= p * mlog(p, 2)
         return entropy
 
     def card_var(self,Y):
@@ -143,9 +151,9 @@ class Learner():
         return s
 
 
-    def information_gain(self,X,Y,axis):
+    def information_gain(self,X,Y,axis,beta):
         # first, calculate global entropy
-        global_entropy = self.entropy(Y)
+        global_entropy = self.entropy(Y,beta)
         # for each possible given class label, calculate the entropy
         # multiply by chance to get label
         labels = np.unique(X)
@@ -161,8 +169,8 @@ class Learner():
                 p_label = np.mean(X==label)
                 p_not_label = 1 - p_label
 
-                entropy_label = self.entropy(Y[X==label])
-                entropy_not_label = self.entropy(Y[X!=label])
+                entropy_label = self.entropy(Y[X==label],beta[X==label])
+                entropy_not_label = self.entropy(Y[X!=label],beta[X!=label])
 
                 entropy_after_split.append(entropy_label*p_label + entropy_not_label*p_not_label)
 
@@ -174,8 +182,8 @@ class Learner():
                 p_label = np.mean(x<=label)
                 p_not_label = 1 - p_label
 
-                entropy_label = self.entropy(Y[x<=label])
-                entropy_not_label = self.entropy(Y[x>label])
+                entropy_label = self.entropy(Y[x<=label],self.beta[x<=label])
+                entropy_not_label = self.entropy(Y[x>label],self.beta[x>label])
 
                 entropy_after_split.append(entropy_label*p_label + entropy_not_label*p_not_label)
         cum_entropy = np.min(entropy_after_split)
@@ -185,7 +193,7 @@ class Learner():
         return gain, best_label
 
 
-    def get_split_gains(self,X,Y):
+    def get_split_gains(self,X,Y,beta):
         '''
         Information gain of a split is calculated based on the ratio of 
         positive and negative examples before and after applying the split.
@@ -197,21 +205,21 @@ class Learner():
         best_feature_vals = []
         for axis in range(X.shape[1]):
             x = X[:,axis]
-            inf_gain, label = self.information_gain(x,Y,axis)
+            inf_gain, label = self.information_gain(x,Y,axis,beta)
             max_gain_per_axis.append(inf_gain)
             best_feature_vals.append(label)
         return max_gain_per_axis, best_feature_vals
 
-    def get_split(self,X,Y):
-        split_gains, split_val = self.get_split_gains(X,Y)
+    def get_split(self,X,Y,beta):
+        split_gains, split_val = self.get_split_gains(X,Y,beta)
         axis = np.argmax(split_gains)
         val = split_val[axis]
         return axis, val
 
 
-    def build_tree(self,X,Y,cur_node,depth):
+    def build_tree(self,X,Y,cur_node,depth,beta):
         # find good split axis
-        axis, val = self.get_split(X,Y)
+        axis, val = self.get_split(X,Y,beta)
         # give parameters to node
         cur_node.axis = axis
         cur_node.val = val
@@ -220,29 +228,29 @@ class Learner():
         elif self.feature_types[axis] == 'd':
             cur_node.type = 'DDN'
         # apply split
-        pos_X, pos_Y, neg_X, neg_Y = cur_node.split(X,Y)
+        pos_X, pos_Y, neg_X, neg_Y, pos_beta, neg_beta = cur_node.split(X,Y,beta)
         if pos_Y.shape[0]==0:
-            cur_node.neg_child = LeafNode(self.most_frequent_label(neg_Y))
+            cur_node.neg_child = LeafNode(self.most_frequent_label(neg_Y,neg_beta))
             cur_node.pos_child = LeafNode(self.opposite(cur_node.neg_child.label))
             return
         if neg_Y.shape[0]==0:
-            cur_node.pos_child = LeafNode(self.most_frequent_label(pos_Y))
+            cur_node.pos_child = LeafNode(self.most_frequent_label(pos_Y,pos_beta))
             cur_node.neg_child = LeafNode(self.opposite(cur_node.pos_child.label))
             return
         if depth >= self.max_depth-1:
-            cur_node.pos_child = LeafNode(self.most_frequent_label(pos_Y))
+            cur_node.pos_child = LeafNode(self.most_frequent_label(pos_Y,pos_beta))
             cur_node.neg_child = LeafNode(self.opposite(cur_node.pos_child.label))
             return
         if all(pos_Y == pos_Y[0]):
             cur_node.pos_child = LeafNode(pos_Y[0])
         else:
             cur_node.pos_child = DecisionNode()
-            self.build_tree(pos_X,pos_Y,cur_node.pos_child,depth+1)
+            self.build_tree(pos_X,pos_Y,cur_node.pos_child,depth+1,pos_beta)
         if all(neg_Y == neg_Y[0]):
             cur_node.neg_child = LeafNode(neg_Y[0])
         else:
             cur_node.neg_child = DecisionNode()
-            self.build_tree(neg_X,neg_Y,cur_node.neg_child,depth+1)
+            self.build_tree(neg_X,neg_Y,cur_node.neg_child,depth+1,neg_beta)
 
 
 

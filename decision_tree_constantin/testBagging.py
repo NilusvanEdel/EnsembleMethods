@@ -7,6 +7,7 @@ Created on Mon Jun 26 12:28:16 2017
 from __future__ import division
 from ensembleMethods import BaggedLearner
 from ensembleMethods import AdaBoost
+from continuousDTLearner import Learner
 import csv
 import numpy as np
 
@@ -31,7 +32,7 @@ def read_data(f_name = 'mushrooms.csv'):
     Y = Y[idx]
     X = X[idx,:]
     file.close()
-    return X, Y, feature_names,code
+    return X[:,10::], Y, feature_names,code
 
 def split_sets(X,Y,ratio_train=.4,ratio_test=.2):
 	l = Y.shape[0]
@@ -48,18 +49,19 @@ def split_sets(X,Y,ratio_train=.4,ratio_test=.2):
 
 	return X_train,Y_train,X_test,Y_test,X_eval,Y_eval
 
-#X, Y, feature_names,code = read_data(f_name = "wdbc.csv")
 X, Y, feature_names,code = read_data(f_name = "mushrooms.csv")
+#X, Y, feature_names,code = read_data(f_name = "mushrooms.csv")
 X_train,Y_train,X_test,Y_test,X_eval,Y_eval = split_sets(X,Y,ratio_train=.4,ratio_test=.2)
 #learner = BaggedLearner(X_train, Y_train,"ddddddddddddddddddddddddddddddddddddddddddd",feature_names,max_depth = 2,ensSize=10)
-learner = AdaBoost(X_train, Y_train,"ddddddddddddddddddddddddddddddddddddddddddd",feature_names,max_depth = 1,ensSize=50)
+learner = AdaBoost(X_train, Y_train,"dddddddddddddddddddddddddddddddddddddddddd",feature_names,max_depth = 1,ensSize=10)
+#learner = Learner(X_train, Y_train,"dddddddddddddddddddddddddddddddddddddddddddddd",feature_names,max_depth = 2)
 
 
 errors = 0
 for i,xt in enumerate(X_test):
     if not learner.predict(xt) == Y_test[i]:
         errors+=1
-print(errors/X_test.shape[0])
+print("Performance: ", 1 - errors/X_test.shape[0])
     
     
     
