@@ -23,10 +23,12 @@ class DecisionTree:
         while(depth < float(self.max_depth)):
             tmp = []
             for node in todo:
-                if not(node.leaf):
+                if not(node.leaf == True):
                     self.build_tree(node)
-                    print(node)
-                    children = list(node.children.values())
+                    if not(node.leaf == True):
+                        children = list(node.children.values())
+                    else:
+                        children = []
                     tmp += children
                 else:
                     continue
@@ -75,7 +77,28 @@ class DecisionTree:
             else:
                 node.split_attribute_name = "None"
                 node.leaf = True
-                node.children = None
+                p_dict = {}
+                s = data.iloc[:,0].value_counts().sum()
+                for value in data.iloc[:,0].value_counts().index:
+                    p_dict[value] = (data.iloc[0].value_counts()[value])/s
+                node.children = p_dict
+            node.data = None
+
+    def classify_samples(self, samples):
+
+        for i in range(len(samples)):
+            split_node = self.root
+            while(True):
+                if(split_node.leaf == False):
+                    key = split_node.split_attribute_name
+                    label = samples.iloc[i][key]
+                    split_node = split_node.children[label]
+                else:
+                    p_dict = split_node.children
+                    samples.iloc[i][0] = max(p_dict, key=p_dict.get)
+                    break
+        return samples
+
 
 class Node:
 
@@ -96,6 +119,21 @@ class Node:
 #######################################
 #######################################
 #######################################
+df = pd.read_csv("Dataset.data", delimiter=" ")
+A = np.zeros(10)
+for i in range(10):
 
-data = pd.read_csv("mushrooms\Dataset.data", delimiter=" ")
-tree = DecisionTree(data)
+    msk = np.random.rand(len(df)) < 0.8
+    train = df[msk]
+    test = df[~msk]
+    validate = df[~msk]
+    repl = {"class": {"p": "NA", "e": "NA"}}
+    test = test.replace(repl)
+
+    tree = DecisionTree(train)
+    test = tree.classify_samples(test)
+
+    ne = (test == validate).any(1)
+    A[i] = ne.values.mean()
+A = A*100
+print(A)
