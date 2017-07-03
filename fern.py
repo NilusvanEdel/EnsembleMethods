@@ -30,7 +30,7 @@ class Fern:
             Y_list.append(Y[ind_list[i]])
         prob_list = []
         whole_prob = sum(Y[:]==1)/len(X)
-        print("Whole prob: ", whole_prob)
+        #print("Whole prob: ", whole_prob)
         for i in range(len(ind_list)):
             num = sum(Y_list[i] == 1)
             denom =len(Y_list[i])
@@ -102,8 +102,8 @@ ratio_test = 1-(ratio_train+ratio_eval)
 from sklearn.model_selection import train_test_split
 X_train, X_test, y_train, y_test = train_test_split(X, Y, test_size=0.2, random_state=4)
 
-fern = Fern(X_train, y_train, 7)
-# fern.pred(X_test, y_test)
+fern = Fern(X_train, y_train, 4)
+fern.pred(X_test, y_test)
 
 
 

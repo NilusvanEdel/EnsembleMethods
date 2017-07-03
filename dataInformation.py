@@ -14,11 +14,20 @@ class DataInformation:
         self.shroom = pd.read_csv('/home/nilus/PycharmProjects/EnsembleMethods/input/mushrooms.csv')
         # remove missing features and exclude veil-type (<-- only one feature included)
         if remove:
-            self.shroom = self.shroom.drop(self.shroom[self.shroom['stalk-root'] == '?'].index)
+            #self.shroom = self.shroom.drop(self.shroom[self.shroom['stalk-root'] == '?'].index)
             self.shroom = self.shroom.drop('veil-type', axis=1)
 
     def get_data(self):
         return self.shroom
+
+    def get_TestTrain(self, split):
+        shroom = self.shroom
+        lbe = LabelEncoder()
+        for feature in shroom.columns[1:]:
+            shroom[feature] = lbe.fit_transform(shroom[feature])
+        y = shroom['class'].values
+        X = shroom.drop('class', axis=1).values
+        return train_test_split(X, y, test_size=split, random_state=4)
 
     def get_one_hot(self):
         shroom = self.shroom
@@ -56,6 +65,7 @@ class DataInformation:
         features = shroom.columns[1:]
         sort_indices = np.argsort(importances)[::-1] #sort the array and start with the highest value
         sorted_features = []
+        # print(sort_indices)
         for idx in sort_indices:
             sorted_features.append(features[idx])
         # show figure
@@ -68,4 +78,8 @@ class DataInformation:
         plt.show()
         '''
         return sorted_features
+
+# temp = DataInformation(True);
+# data = temp.get_list_of_significance()
+# print(data)
 
