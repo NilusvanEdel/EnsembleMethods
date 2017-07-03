@@ -83,13 +83,14 @@ class Learner():
 	# values. e.g. ['c']*X.shape[1] 
     def __init__(self,X,Y,feature_types,feature_names=None,max_depth = 3,beta = None):
         print("created Learner")
+#        self.Ycopy = np.copy(Y)
+#        self.betaCopy = np.copy(beta)
+
         self.X = X
         self.Y = Y
         self.feature_types = feature_types
         self.feature_names = feature_names
         self.max_depth = max_depth
-        print(X.shape)
-        print(Y.shape)
         if beta == None:
             beta = np.ones(X.shape[0]) / X.shape[0]
         else:
@@ -111,13 +112,35 @@ class Learner():
         return -x
 
     def most_frequent_label(self,Y,beta):
+#        indY = self.findContainingInd(self.Ycopy,Y)
+#        indBeta = self.findContainingInd(self.betaCopy,beta)
+#        if not indY == indBeta:
+#            raise RuntimeError("nicht gleich")
+            
         ys = np.unique(Y)
         count = []
+        if Y.shape != beta.shape or (beta<0).any():
+            print("Y shape: ", Y.shape)
+            print("beta: ",beta.shape)
+            print("beta 0: ",(beta<0).any())
+            raise ValueError("Fehler")
+        
         for y in ys:
             count.append(np.sum(beta[Y==y]))
 #            count.append(np.sum(Y==y))
         mfl = ys[np.argmax(count)]
+#        if max(count) < 0.5:
+#            print("ys: ",ys)
+#            print("count: ",count)
+#            raise ValueError("Fehler")
         return mfl
+    def findContainingInd(self,a,b):
+        for i in range(a.shape[0]-b.shape[0]):
+            for j in range(b.shape[0]):
+                if not a[i+j] == b[j]:
+                    break
+            return i
+        raise RuntimeError("nicht enthalten")
 
     def entropy(self,Y,beta):
         if Y.shape[0] == 0:
@@ -166,8 +189,16 @@ class Learner():
                 #per_label = self.entropy(Y[X==label]) 
                 #cum_entropy += per_label * p_label
                 #label_gain.append(per_label)
-                p_label = np.mean(X==label)
+                #p_label = np.mean(X==label)
+                p_label = 0
+                for i,x in enumerate(X):
+                    if x == label:
+                        p_label += beta[i]
+                p_label /= np.sum(beta)
+                
                 p_not_label = 1 - p_label
+                if p_label + p_not_label != 1:
+                    raise RuntimeError("not 1 but: ",p_label + p_not_label)
 
                 entropy_label = self.entropy(Y[X==label],beta[X==label])
                 entropy_not_label = self.entropy(Y[X!=label],beta[X!=label])
@@ -230,10 +261,12 @@ class Learner():
         # apply split
         pos_X, pos_Y, neg_X, neg_Y, pos_beta, neg_beta = cur_node.split(X,Y,beta)
         if pos_Y.shape[0]==0:
+            raise ValueError("Fehler3")
             cur_node.neg_child = LeafNode(self.most_frequent_label(neg_Y,neg_beta))
             cur_node.pos_child = LeafNode(self.opposite(cur_node.neg_child.label))
             return
         if neg_Y.shape[0]==0:
+            raise ValueError("Fehler4")
             cur_node.pos_child = LeafNode(self.most_frequent_label(pos_Y,pos_beta))
             cur_node.neg_child = LeafNode(self.opposite(cur_node.pos_child.label))
             return
@@ -242,12 +275,14 @@ class Learner():
             cur_node.neg_child = LeafNode(self.opposite(cur_node.pos_child.label))
             return
         if all(pos_Y == pos_Y[0]):
-            cur_node.pos_child = LeafNode(pos_Y[0])
+            #cur_node.pos_child = LeafNode(pos_Y[0])
+            raise ValueError("Fehler1")
         else:
             cur_node.pos_child = DecisionNode()
             self.build_tree(pos_X,pos_Y,cur_node.pos_child,depth+1,pos_beta)
         if all(neg_Y == neg_Y[0]):
-            cur_node.neg_child = LeafNode(neg_Y[0])
+            #cur_node.neg_child = LeafNode(neg_Y[0])
+            raise ValueError("Fehler2")
         else:
             cur_node.neg_child = DecisionNode()
             self.build_tree(neg_X,neg_Y,cur_node.neg_child,depth+1,neg_beta)

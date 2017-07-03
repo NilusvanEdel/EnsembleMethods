@@ -20,25 +20,25 @@ class AdaBoost:
         self.max_depth = max_depth
         self.N = self.X.shape[0]
 
-        self.beta = np.ones(self.N) * (1./self.N)
+        beta = np.ones(self.N) * (1./self.N)
         for i in range(ensSize):
-            self.learn(i)
+            self.learn(i,beta)
             #calculate losses
             losses = self.calcLosses(self.learners[i])
-            print(np.mean(losses))
+            print("in sample error: ",np.mean(losses))
             #compute the weighted error
-            wError =  self.calcWeightedError(losses*1)
+            wError =  self.calcWeightedError(losses*1,beta)
             print("wError: ",wError)
             #compute hypothesis weight
             self.calcHypoWeight(wError,i)
             #update the weights beta
-            self.updateBeta(losses,wError,i)
+            beta = self.updateBeta(losses,wError,i,beta)
         print("hypoWeights: ", self.hypoWeights)
         
         
-    def learn(self,i):
+    def learn(self,i,beta):
 
-        l = Learner(self.X,self.Y,self.feature_types,self.feature_names,self.max_depth,self.beta)
+        l = Learner(self.X,self.Y,self.feature_types,self.feature_names,self.max_depth,beta)
         self.learners[i] = l
                      
 #    def predictions(self,learner):
@@ -53,10 +53,13 @@ class AdaBoost:
             losses[i] = learner.predict(x) != self.Y[i]
         return losses
     
-    def calcWeightedError(self,losses):
-        return np.dot(self.beta, losses)
+    def calcWeightedError(self,losses,beta):
+        return np.dot(beta, losses)
     
     def calcHypoWeight(self,wError,i):
+        #SE solution:
+#        eps = self.beta.dot(self.predictions(self.learners[i]) != self.Y)
+#        self.hypoWeights[i] = (np.log(1 - eps) - np.log(eps)) / 2
 
         if np.allclose(wError, 1):
             #print("in 1")
@@ -68,16 +71,18 @@ class AdaBoost:
             #print("in 3")
             self.hypoWeights[i] = 0.5 * np.math.log((1-wError) / wError)
         
-    def updateBeta(self,losses,wError,i):
+    def updateBeta(self,losses,wError,i,beta):
+        #self.beta = self.beta * np.exp(- self.hypoWeights[i] * self.Y * self.predictions(self.learners[i]))
         #for worngly classified beta:
-        self.beta[losses] *= np.exp(self.hypoWeights[i])
+        beta[losses] *= np.exp(self.hypoWeights[i])
         #self.beta[losses] /= 2*wError
                  
         #for correctly classified beta:
-        self.beta[np.logical_not(losses)] *= np.exp(-self.hypoWeights[i])
+        beta[np.logical_not(losses)] *= np.exp(-self.hypoWeights[i])
         #self.beta[np.logical_not(losses)] /= 2*(1-wError)
         #normalize
-        self.beta /= np.sum(self.beta)
+        beta /= np.sum(beta)
+        return beta
 
     def predict(self,x):
         predictions = np.empty_like(self.learners)
