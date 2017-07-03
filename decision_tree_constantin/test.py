@@ -12,7 +12,7 @@ from scipy.misc import imread, imresize
 # mushrooms
 # min_tit3  ['d','d','d','d','d','c','c']
 
-def read_data(f_name = 'wdbc.csv'):
+def read_data(f_name = 'mushrooms.csv'):
     file = open(f_name)
     reader = csv.reader(file)
     data = []
@@ -69,9 +69,9 @@ def split_sets(X,Y,ratio_train=.4,ratio_test=.2):
     return X_train,Y_train,X_test,Y_test,X_eval,Y_eval
 
 
-n_trees = 100
-max_depth = 2
-samples_per_tree = 10
+n_trees = 5
+max_depth = 50
+samples_per_tree = 400
 
 min_perf_tree = .5
 max_perf_tree = 1.0 
@@ -81,8 +81,8 @@ ratio_test = .15
 ratio_eval = 1-(ratio_test+ratio_train)
 
 
-X,Y,feature_names,code = read_data()
-#X,Y = read_image()
+#X,Y,feature_names,code = read_data()
+X,Y = read_image()
 
 X_train,Y_train,X_test,Y_test,X_eval,Y_eval = split_sets(X,Y,
                                 ratio_train=ratio_train,ratio_test=ratio_test)
@@ -105,9 +105,9 @@ for l in range(n_trees):
     else:
         learner = cDTL.Learner(x,y,
             #['d','d','d','d','d','c','c'],
-            ['c']*X.shape[1],
+            ['d']*X.shape[1],
             max_depth = max_depth,
-            data_weights=new_weights)
+            data_weights=None)
     new_weights = learner.data_weights
     learners.append(learner)
     Y_hat_train = (np.array([learner.predict(xx) for xx in x]) == y)+0
