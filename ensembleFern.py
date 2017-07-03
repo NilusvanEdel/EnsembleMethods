@@ -7,7 +7,7 @@ from sklearn.preprocessing import LabelBinarizer
 di = DataInformation(True)
 X_train, X_test, y_train, y_test = di.get_TestTrain(0.3)
 ferns = []
-numberOfFerns = 15
+numberOfFerns = 10
 numberOfSplits = 5
 fernPreds = []
 fernAccuracies = []
@@ -26,16 +26,16 @@ y = y_test[:]=='e'
 y = y.astype(float)
 X = np.transpose(X)
 # linear added (average of all weight for all = 1)
-rightPred = 0
+rightPred_lin = 0
 for i in range(len(X)):
     if sum(X[i]) > numberOfSplits/2 and y[i]==1:
-        rightPred += 1
+        rightPred_lin += 1
     elif sum(X[i]) < numberOfSplits/2 and y[i]==0:
-        rightPred += 1
+        rightPred_lin += 1
 print("Accuracy for simple linear combination: ", rightPred/len(X))
 
 # linear combination weighted with its accuracies
-rightPred = 0
+rightPred_wei = 0
 for i in range(len(X)):
     tmpTrue = 0
     counterTrue = 0
@@ -52,10 +52,10 @@ for i in range(len(X)):
     if counterFalse != 0: tmpFalse /= counterFalse
 
     if tmpTrue > tmpFalse and y[i]==1:
-        rightPred += 1
+        rightPred_wei += 1
     elif tmpTrue < tmpFalse and y[i]==0:
-        rightPred += 1
-print("Accuracy for weighted linear combination: ", rightPred / len(X))
+        rightPred_wei += 1
+print("Accuracy for weighted linear combination: ", rightPred_wei / len(X))
 
 # single layer perceptron
 clf = Perceptron()
