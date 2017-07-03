@@ -19,14 +19,30 @@ class DataInformation:
     def get_data(self):
         return self.shroom
 
-    def get_TestTrain(self, split):
+    # split = 0.7 etc.
+    #returns trainings and testset, if random=False it will be the same one over and over
+    def get_TestTrain(self, split, random=False):
         shroom = self.shroom
         lbe = LabelEncoder()
         for feature in shroom.columns[1:]:
             shroom[feature] = lbe.fit_transform(shroom[feature])
         y = shroom['class'].values
         X = shroom.drop('class', axis=1).values
-        return train_test_split(X, y, test_size=split, random_state=4)
+        if random:
+            return train_test_split(X, y, test_size=split, random_state=np.random.randint(0,10000000))
+        else:
+            return train_test_split(X, y, test_size=split, random_state=1)
+
+    # returns the trainings, test and validation set, if random=False it will be the same one over and over
+    def get_TestTrainVal(self, split, split_test, random=False):
+        X_train, X_tmp, y_train, y_tmp = self.get_TestTrain(split, random)
+        if random:
+            X_test, X_val, y_test, y_val = train_test_split(X_tmp, y_tmp, test_size=split_test,
+                                                            random_state=np.random.randint(0,10000000))
+        else:
+            X_test, X_val, y_test, y_val = train_test_split(X_tmp, y_tmp, test_size=split_test,
+                                                            random_state=1)
+        return X_train, X_test, X_val, y_train, y_test, y_val
 
     def get_one_hot(self):
         shroom = self.shroom
