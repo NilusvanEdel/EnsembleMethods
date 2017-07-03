@@ -85,8 +85,6 @@ forest = cDTL.ForestLearner(xf,yf,
 							features_per_tree = fpt,
 							feature_names = feature_names)
 
-
-
 Y_hat = [forest.predict(x) for x in X_vali]
 Y_hat_linear = [forest.predict_linear(x) for x in X_vali]
 

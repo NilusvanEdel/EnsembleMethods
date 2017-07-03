@@ -3,6 +3,7 @@ from betterFern import BetterFern
 from sklearn.linear_model import Perceptron
 from dataInformation import DataInformation
 from sklearn.preprocessing import LabelBinarizer
+import cDTLearner as cDTL
 
 di = DataInformation(True)
 X_train, X_test, y_train, y_test = di.get_TestTrain(0.3)
@@ -32,7 +33,7 @@ for i in range(len(X)):
         rightPred_lin += 1
     elif sum(X[i]) < numberOfSplits/2 and y[i]==0:
         rightPred_lin += 1
-print("Accuracy for simple linear combination: ", rightPred/len(X))
+print("Accuracy for simple linear combination: ", rightPred_lin/len(X))
 
 # linear combination weighted with its accuracies
 rightPred_wei = 0
@@ -57,8 +58,21 @@ for i in range(len(X)):
         rightPred_wei += 1
 print("Accuracy for weighted linear combination: ", rightPred_wei / len(X))
 
+
 # single layer perceptron
 clf = Perceptron()
 clf.fit(X, y)
 
 print('Accuracy for perceptron:', clf.score(X, y))
+
+
+
+ensemble_tree = cDTL.Learner(max_depth = 5)
+ensemble_tree.learn(X,y,['d']*X.shape[1])
+
+X_validation = np.copy(X)
+Y_validation = np.copy(y)
+
+Y_hat = np.array([ensemble_tree.predict(x) for x in X_validation])
+perf_tree = np.mean(Y_hat==Y_validation)
+print('Accuracy of tree classifier: {0}'.format(perf_tree))

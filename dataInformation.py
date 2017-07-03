@@ -1,7 +1,6 @@
 import numpy as np # linear algebra
 import pandas as pd # data processing, CSV file I/O (e.g. pd.read_csv)
 import matplotlib.pyplot as plt
-import seaborn as sns
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelBinarizer
 from sklearn.preprocessing import LabelEncoder
@@ -11,7 +10,7 @@ from sklearn.ensemble import RandomForestClassifier
 class DataInformation:
     def __init__(self, remove):
         self.remove = remove
-        self.shroom = pd.read_csv('/home/nilus/PycharmProjects/EnsembleMethods/input/mushrooms.csv')
+        self.shroom = pd.read_csv('mushrooms.csv')
         # remove missing features and exclude veil-type (<-- only one feature included)
         if remove:
             #self.shroom = self.shroom.drop(self.shroom[self.shroom['stalk-root'] == '?'].index)
