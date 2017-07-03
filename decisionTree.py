@@ -30,7 +30,8 @@ X = scaler.fit_transform(X)
 '''
 
 # predict the test data set with the decision tree
-clf = tree.DecisionTreeClassifier()
+# max_depth=, max_features= are probably the most important ones to consider <-- how does max_features work?
+clf = tree.DecisionTreeClassifier(max_depth=2, max_features=5)
 clf = clf.fit(X_train, y_train)
 pred = clf.predict(X_test)
 
