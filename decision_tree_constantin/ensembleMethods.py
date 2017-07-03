@@ -25,10 +25,10 @@ class AdaBoost:
             self.learn(i,beta)
             #calculate losses
             losses = self.calcLosses(self.learners[i])
-            print("in sample error: ",np.mean(losses))
+            #print("in sample error: ",np.mean(losses))
             #compute the weighted error
             wError =  self.calcWeightedError(losses*1,beta)
-            print("wError: ",wError)
+            #print("wError: ",wError)
             #compute hypothesis weight
             self.calcHypoWeight(wError,i)
             #update the weights beta

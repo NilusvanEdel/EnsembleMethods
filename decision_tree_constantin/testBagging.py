@@ -51,18 +51,18 @@ def split_sets(X,Y,ratio_train=.4,ratio_test=.2):
 
 	return X_train,Y_train,X_test,Y_test,X_eval,Y_eval
 
-X, Y, feature_names,code = read_data(f_name = "mushrooms.csv")
-best_features = [4,11,12,8]
-worst_features = [x for x in np.arange(X.shape[1]) if not (x==best_features).any()]
-X = X[:,worst_features]
 
 maxEnsSize = 10
 perfRes = np.zeros(maxEnsSize)
 for j,ensSize in enumerate(np.arange(maxEnsSize)+1):
     avgPerf = 0
-    nrIt = 1
+    nrIt = 20
     for i in range(nrIt): 
-        #X, Y, feature_names,code = read_data(f_name = "mushrooms.csv")
+        X, Y, feature_names,code = read_data(f_name = "mushrooms.csv")
+        best_features = [4,11,12,8]
+        worst_features = [x for x in np.arange(X.shape[1]) if not (x==best_features).any()]
+        X = X[:,worst_features]
+
         X_train,Y_train,X_test,Y_test,X_eval,Y_eval = split_sets(X,Y,ratio_train=.4,ratio_test=.2)
     
     
@@ -86,7 +86,7 @@ fig = plt.figure("Results AdaBoost")
 plt.plot(np.arange(maxEnsSize)+1,perfRes,"bo")
 plt.xlabel("Ensemble Size", fontsize=18)
 plt.ylabel("Performance", fontsize=18)
-
+fig.savefig('Results AdaBoost '+str(maxEnsSize)+" "+str(nrIt)+'.png')
 #ax.tick_params(labelsize=10)
 plt.show()
         
