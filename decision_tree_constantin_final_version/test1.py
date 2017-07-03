@@ -27,11 +27,6 @@ Y_hat = [tree_regular.predict(x) for x in X_test]
 perf = np.mean(Y_hat==Y_test)
 print('performance regular tree: {0}'.format(perf))
 
-gains, _ = tree_regular.get_split_gains(X_train,Y_train)
-idx = np.flipud(np.argsort(gains))
-print(idx)
-print(X_train.shape)
-
 
 '''
 Here we initialize a tree with predifined features to split along
@@ -48,11 +43,10 @@ tree_pred_feats.learn(np.copy(X_train),np.copy(Y_train),feature_types)
 
 
 
-
-gains, _ = tree_regular.get_split_gains(np.copy(X_train),np.copy(Y_train))
-idx = np.flipud(np.argsort(gains))
-print(idx)
-print(X_train.shape)
+# test the tree
+Y_hat = [tree_pred_feats.predict(x) for x in X_test]
+perf = np.mean(Y_hat==Y_test)
+print('performance tree using only features {0}: {1}'.format(feature_subset,perf))
 
 
 '''
@@ -128,5 +122,6 @@ for t in range(X.shape[1]):
 	perfs.append(perf)
 
 plt.plot(perfs)
-plt.xticks(np.arange(0,len(feature_names),1),dropded_features,rotation='vertical')
+plt.xticks(np.arange(1,len(feature_names)+1,1),dropded_features,rotation='vertical')
+plt.title('ordered feature dropout')
 plt.show()

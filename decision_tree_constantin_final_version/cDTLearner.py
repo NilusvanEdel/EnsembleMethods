@@ -17,8 +17,6 @@ class LeafNode():
         self.type = 'LN'
 
 
-
-
 class DecisionNode():
 
     def __init__(self,axis=None,val=None):
@@ -40,8 +38,6 @@ class DecisionNode():
                 return self.pos_child
             else:
                 return self.neg_child
-
-
 
 
     def split(self,X,Y):
@@ -131,7 +127,6 @@ class ForestLearner():
         #tmp = np.array((np.mean(self.output_trees,1)>0.)*2-1)
         tmp_inv = np.linalg.pinv(self.output_trees)
         self.x_out = np.dot(tmp_inv,Y_test)
-
 
 
     def predict(self,x):
