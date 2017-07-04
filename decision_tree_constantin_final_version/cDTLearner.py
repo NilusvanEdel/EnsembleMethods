@@ -130,11 +130,11 @@ class ForestLearner():
 
 
     def predict(self,x):
-        output_trees = []
+        self.output_trees = []
         for tree in self.trees:
-            output_trees.append(tree.predict(x))
-        output_trees = np.array(output_trees)
-        return self.forest.predict(output_trees)
+            self.output_trees.append(tree.predict(x))
+        self.output_trees = np.array(self.output_trees)
+        return self.forest.predict(self.output_trees)
 
     def predict_linear(self,x):
         output_trees = []
@@ -143,6 +143,14 @@ class ForestLearner():
         output_trees = np.array(output_trees)
 
         return (np.dot(output_trees.T,self.x_out)>0.)*2-1
+
+    def predict_vote(self,x):
+        output_trees = []
+        for tree in self.trees:
+            output_trees.append(tree.predict(x))
+        output_trees = np.sign(np.mean(output_trees))
+
+        return output_trees
 
 
 
@@ -165,6 +173,8 @@ class Learner():
             idx = [any(self.feature_indices == ix) for ix in range(X.shape[1])]
             idx = np.invert(idx)
             X[:,idx] = '0'
+        else:
+            self.feature_indices = np.arange(0,X.shape[1],1)
         self.feature_types = feature_types
         self.root = DecisionNode()
         self.build_tree(X,Y, self.root,0)
