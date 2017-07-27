@@ -66,8 +66,25 @@ def read_image(f_name = 'test.png'):
         Y[Y==v] = code[ix]
     Y = Y*2-1
     return X,Y
+def one_hot(X,Y):
+    newNrFeat = 0
+    for i in range(X.shape[1]):
+        feat = np.unique(X[:,i])
+        newNrFeat += len(feat)
+    newX = np.empty((X.shape[0],newNrFeat))
+    index = 0
+    for i in range(X.shape[1]):
+        feat = np.unique(X[:,i])
+        for j,f in enumerate(feat):
+            newFeatures = X[:,i] == f * 1
+            newX[:,index] = newFeatures
+            index += 1
+            newCSV = np.hstack((Y.reshape(Y.shape[0],1),newX))
+    np.savetxt("mushroomsOneHot.csv",newCSV,delimiter = ",")    
 
-X, Y, feature_names,code = read_data(f_name = "wdbc.csv")
+
+X, Y, feature_names,code = read_data(f_name = "mushroomsOneHot.csv")
+print(X.shape, Y.shape)
 #X, Y = read_image()
 #best_features = [4,11,12,8]
 #worst_features = [x for x in np.arange(X.shape[1]) if not (x==best_features).any()]
@@ -76,7 +93,7 @@ X, Y, feature_names,code = read_data(f_name = "wdbc.csv")
 X_train,Y_train,_,_,_,_ = split_sets(X,Y,ratio_train=1,ratio_test=0)
 _,_,X_test,Y_test,_,_ = split_sets(X,Y,ratio_train=0,ratio_test=1)
 #X_train,Y_train,X_test,Y_test,_,_ = split_sets(X,Y,ratio_train=0.7,ratio_test=0.3)
-
+print("generated Data")
 maxEnsSize = 20
 perfRes = np.zeros(maxEnsSize)
 for j,ensSize in enumerate(np.arange(maxEnsSize)+1):
@@ -96,7 +113,7 @@ for j,ensSize in enumerate(np.arange(maxEnsSize)+1):
         #learner = BaggedLearner(X_train, Y_train,"ddddddddddddddddddddddddddddddddddddddddddd",feature_names,max_depth = 2,ensSize=10)
         learner = AdaBoost(X_train, Y_train,ensSize=ensSize)
         #learner = Learner(X_train, Y_train,"dddddddddddddddddddddddddddddddddddddddddddddd",feature_names,max_depth = 1)
-    
+        print("finnished learning")
         
         errors = 0
         for i,xt in enumerate(X_test):
