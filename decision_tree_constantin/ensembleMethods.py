@@ -4,20 +4,18 @@ Created on Mon Jun 26 11:56:36 2017
 
 @author: Henning
 """
-from continuousDTLearner import Learner
+from __future__ import division
+from stumpLearner import stumpLearner
 import numpy as np
 import threading
-
+from matplotlib import pyplot as plt
 class AdaBoost:
     
-    def __init__(self,X,Y,feature_types,feature_names=None,max_depth = 3,ensSize=10):
+    def __init__(self,X,Y,ensSize=10):
         self.X = X
         self.Y = Y
         self.learners = np.empty(ensSize,dtype=object)
         self.hypoWeights = np.empty(ensSize,dtype=np.float16)
-        self.feature_types = feature_types
-        self.feature_names = feature_names
-        self.max_depth = max_depth
         self.N = self.X.shape[0]
 
         beta = np.ones(self.N) * (1./self.N)
@@ -33,19 +31,21 @@ class AdaBoost:
             self.calcHypoWeight(wError,i)
             #update the weights beta
             beta = self.updateBeta(losses,wError,i,beta)
+            #self.plot(beta,i)
         print("hypoWeights: ", self.hypoWeights)
         
         
     def learn(self,i,beta):
 
-        l = Learner(self.X,self.Y,self.feature_types,self.feature_names,self.max_depth,beta)
+        l = stumpLearner(self.X,self.Y,beta)
+        l.learn()
         self.learners[i] = l
                      
-#    def predictions(self,learner):
-#        predictions = np.empty(self.N)
-#        for i,x in enumerate(self.X):
-#            predictions[i] = learner.predict(x)
-#        return predictions
+    def predictions(self,learner):
+        predictions = np.empty(self.N)
+        for i,x in enumerate(self.X):
+            predictions[i] = learner.predict(x)
+        return predictions
         
     def calcLosses(self,learner):
         losses = np.empty(self.N,dtype=bool)
@@ -62,9 +62,11 @@ class AdaBoost:
 #        self.hypoWeights[i] = (np.log(1 - eps) - np.log(eps)) / 2
 
         if np.allclose(wError, 1):
+            raise RuntimeError("wError is 1")
             #print("in 1")
             self.hypoWeights[i] = 0
         elif np.allclose( wError, 0):
+            raise RuntimeError("wError is 0")
             #TODO: was tun wenn error 0?
             self.hypoWeights[i] = 10000
         else:
@@ -72,7 +74,8 @@ class AdaBoost:
             self.hypoWeights[i] = 0.5 * np.math.log((1-wError) / wError)
         
     def updateBeta(self,losses,wError,i,beta):
-        #self.beta = self.beta * np.exp(- self.hypoWeights[i] * self.Y * self.predictions(self.learners[i]))
+        #beta = beta * np.exp(- self.hypoWeights[i] * self.Y * self.predictions(self.learners[i]))
+        #beta *= np.exp((losses*1)*wError)
         #for worngly classified beta:
         beta[losses] *= np.exp(self.hypoWeights[i])
         #self.beta[losses] /= 2*wError
@@ -82,25 +85,34 @@ class AdaBoost:
         #self.beta[np.logical_not(losses)] /= 2*(1-wError)
         #normalize
         beta /= np.sum(beta)
+        if (beta < 0).any():
+            raise RuntimeError("beta kleiner 0")
         return beta
 
     def predict(self,x):
         predictions = np.empty_like(self.learners)
         for i,learner in enumerate(self.learners):
             predictions[i] = learner.predict(x)
-        #print("single predictions ",predictions)
+#        if not (predictions == predictions[0]).all():
+#            print("single predictions ",predictions)
         pred = self.voting(predictions)
         #print("pred out: ", pred)
         return pred
     
+#    def voting(self,predictions):
+#        preSet = set(predictions)
+#        lWeights = np.empty(len(preSet),dtype=np.float64)
+#        for i,l in enumerate(preSet):
+#            lWeight = np.sum(self.hypoWeights[predictions == l])
+#            lWeights[i] = lWeight
+#        return list(preSet)[np.argmax(lWeights)]
     def voting(self,predictions):
-        preSet = set(predictions)
-        lWeights = np.empty(len(preSet),dtype=np.float64)
-        for i,l in enumerate(preSet):
-            lWeight = np.sum(self.hypoWeights[predictions == l])
-            lWeights[i] = lWeight
-        return list(preSet)[np.argmax(lWeights)]
-
+        return np.sign(np.dot(self.hypoWeights,predictions))
+    def plot(self,beta,i):
+        plt.figure("fig "+str(i))
+        shape = int(np.sqrt(self.Y.shape[0]))
+        Yplot = self.Y * beta
+        plt.imshow(Yplot.reshape((shape,shape)))
 class BaggedLearner:
     
     def __init__(self,X,Y,feature_types,feature_names=None,max_depth = 3,ensSize=10):
