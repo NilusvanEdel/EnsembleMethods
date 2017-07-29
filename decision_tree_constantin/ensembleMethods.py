@@ -41,11 +41,11 @@ class AdaBoost:
         l.learn()
         self.learners[i] = l
                      
-    def predictions(self,learner):
-        predictions = np.empty(self.N)
-        for i,x in enumerate(self.X):
-            predictions[i] = learner.predict(x)
-        return predictions
+#    def predictions(self,learner):
+#        predictions = np.empty(self.N)
+#        for i,x in enumerate(self.X):
+#            predictions[i] = learner.predict(x)
+#        return predictions
         
     def calcLosses(self,learner):
         losses = np.empty(self.N,dtype=bool)

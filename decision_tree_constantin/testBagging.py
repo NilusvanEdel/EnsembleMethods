@@ -83,8 +83,9 @@ def one_hot(X,Y):
     np.savetxt("mushroomsOneHot.csv",newCSV,delimiter = ",")    
 
 
-X, Y, feature_names,code = read_data(f_name = "mushroomsOneHot.csv")
-print(X.shape, Y.shape)
+#X, Y, feature_names,code = read_data(f_name = "mushroomsOneHot.csv")
+X, Y, feature_names,code = read_data(f_name = "wdbc.csv")
+#print(X.shape, Y.shape)
 #X, Y = read_image()
 #best_features = [4,11,12,8]
 #worst_features = [x for x in np.arange(X.shape[1]) if not (x==best_features).any()]
@@ -94,7 +95,7 @@ X_train,Y_train,_,_,_,_ = split_sets(X,Y,ratio_train=1,ratio_test=0)
 _,_,X_test,Y_test,_,_ = split_sets(X,Y,ratio_train=0,ratio_test=1)
 #X_train,Y_train,X_test,Y_test,_,_ = split_sets(X,Y,ratio_train=0.7,ratio_test=0.3)
 print("generated Data")
-maxEnsSize = 20
+maxEnsSize = 30
 perfRes = np.zeros(maxEnsSize)
 for j,ensSize in enumerate(np.arange(maxEnsSize)+1):
     avgPerf = 0
@@ -127,14 +128,14 @@ for j,ensSize in enumerate(np.arange(maxEnsSize)+1):
         avgPerf += perf/nrIt
     print("AvgPerformance: ",  avgPerf)
     perfRes[j] = avgPerf
-#fig = plt.figure("Results AdaBoost")  
-##ax = fig.add_axes()
-#plt.plot(np.akjrange(maxEnsSize)+1,perfRes,"bo")
-#plt.xlabel("Ensemble Size", fontsize=18)
-#plt.ylabel("Performance", fontsize=18)
-#fig.savefig('Results AdaBoost '+str(maxEnsSize)+" "+str(nrIt)+'.png')
-##ax.tick_params(labelsize=10)
-#plt.show()
+fig = plt.figure("Results AdaBoost")  
+#ax = fig.add_axes()
+plt.plot(np.arange(maxEnsSize)+1,perfRes,"bo")
+plt.xlabel("Ensemble Size", fontsize=18)
+plt.ylabel("Performance", fontsize=18)
+fig.savefig('Results AdaBoost '+str(maxEnsSize)+" "+str(nrIt)+'.png')
+#ax.tick_params(labelsize=10)
+plt.show()
         
 
 
