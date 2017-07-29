@@ -157,10 +157,13 @@ class ForestLearner():
 
         return output_trees
 
+<<<<<<< HEAD
     def batch(self,X,Y,size):
         idx = np.random.randint(X.shape[0],size=[size])
         return X[idx,:],Y[idx]
 
+=======
+>>>>>>> 3cd2dc970293d80f84bd94c9c31bcea9d2df6c2c
 
 
 class Learner():
