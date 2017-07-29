@@ -29,7 +29,7 @@ def read_data(f_name = 'min_tit3.csv'):
     feature_names = data[0,:]
     file.close()
     return X, Y, feature_names
-
+ 
 
 def read_image(f_name = 'test.png'):
     data = imread(f_name)
@@ -73,7 +73,7 @@ ratio_test = .01
 X_train,Y_train,X_test,Y_test,X_eval,Y_eval = split_sets(X,Y,
                                 ratio_train=ratio_train,ratio_test=ratio_test)
 
-tree = cDTL.Learner(X_train,Y_train,['c','c'], max_depth = 10)
+tree = cDTL.Learner(X_train,Y_train,['c','c'], max_depth = 20)
 
 K = np.reshape(Y,[100,100])
 plt.imshow(K,extent=[-1,99,99,-1])

@@ -65,8 +65,8 @@ class ForestLearner():
 
     def __init__(self, X, Y, feature_types, feature_names = None,
                  n_trees = 12, max_depth = 10, features_per_tree = None,
-                 random_splits = False,
-                 share_features = False, ratio_train = 0.7):
+                 random_splits = True, batch_size = None, ensemble_tree_depth = 20,
+                 share_features = True, ratio_train = 0.7):
 
         self.trees = []
         self.n_trees = n_trees
@@ -75,6 +75,11 @@ class ForestLearner():
         self.feature_types = feature_types
         self.share_features = share_features
         self.random_splits = random_splits
+        self.ensemble_tree_depth = ensemble_tree_depth
+        if not batch_size is None:
+            self.batch_size = batch_size
+        else:
+            self.batch_size = int(X.shape[0]/self.n_trees)*2
 
         # split training testing set
         idx = np.random.permutation(X.shape[0])
@@ -115,13 +120,15 @@ class ForestLearner():
                            random_splits = self.random_splits, 
                            feature_names = self.feature_names,
                            feature_indices = self.feature_indices_list[t])
-            tree.learn(X_train,Y_train,self.feature_types)
+            X_train_batch,Y_train_batch = self.batch(X_train,Y_train,size = self.batch_size)
+            tree.learn(X_train_batch,Y_train_batch,self.feature_types)
             Y_hat = [tree.predict(x) for x in X_test]
-            self.output_trees.append(Y_hat)
-            self.trees.append(tree)
+            if np.mean(Y_hat == Y_test)>.5:
+                self.output_trees.append(Y_hat)
+                self.trees.append(tree)
         self.output_trees = np.array(self.output_trees).T
-        self.forest = Learner(max_depth = self.n_trees)
-        self.forest.learn(self.output_trees,Y_test,'d'*self.n_trees)
+        self.ensemble_tree = Learner(max_depth = self.ensemble_tree_depth)
+        self.ensemble_tree.learn(self.output_trees,Y_test,'d'*self.n_trees)
 
 
         #tmp = np.array((np.mean(self.output_trees,1)>0.)*2-1)
@@ -130,11 +137,11 @@ class ForestLearner():
 
 
     def predict(self,x):
-        output_trees = []
+        self.output_trees = []
         for tree in self.trees:
-            output_trees.append(tree.predict(x))
-        output_trees = np.array(output_trees)
-        return self.forest.predict(output_trees)
+            self.output_trees.append(tree.predict(x))
+        self.output_trees = np.array(self.output_trees)
+        return self.ensemble_tree.predict(self.output_trees)
 
     def predict_linear(self,x):
         output_trees = []
@@ -144,6 +151,17 @@ class ForestLearner():
 
         return (np.dot(output_trees.T,self.x_out)>0.)*2-1
 
+    def predict_vote(self,x):
+        output_trees = []
+        for tree in self.trees:
+            output_trees.append(tree.predict(x))
+        output_trees = np.sign(np.mean(output_trees))
+
+        return output_trees
+
+    def batch(self,X,Y,size):
+        idx = np.random.randint(X.shape[0],size=[size])
+        return X[idx,:],Y[idx]
 
 
 class Learner():
@@ -159,16 +177,14 @@ class Learner():
 
 
     def learn(self,X,Y,feature_types):
-        if type(Y[0]) == type('str'):
-            Y = (Y==Y[0])*2-1
-            print(Y)
-        print(type(Y[0]))
         if self.feature_names is None:
             self.feature_names = self.code_features(X)
         if not self.feature_indices is None:
             idx = [any(self.feature_indices == ix) for ix in range(X.shape[1])]
             idx = np.invert(idx)
             X[:,idx] = '0'
+        else:
+            self.feature_indices = np.arange(0,X.shape[1],1)
         self.feature_types = feature_types
         self.root = DecisionNode()
         self.build_tree(X,Y, self.root,0)
@@ -216,7 +232,6 @@ class Learner():
         # for each possible given class label, calculate the entropy
         # multiply by chance to get label
         labels = np.unique(X)
-        cum_entropy = 0
         #label_gain = []
         entropy_after_split = []
         if self.feature_types[axis] == 'd':
@@ -235,8 +250,7 @@ class Learner():
                 entropy_label = self.entropy(Y[x<=label])
                 entropy_not_label = self.entropy(Y[x>label])
                 entropy_after_split.append(entropy_label*p_label + entropy_not_label*p_not_label)
-        cum_entropy = np.min(entropy_after_split)
-        gain = global_entropy - cum_entropy
+        gain = global_entropy - np.min(entropy_after_split)
         best_label = labels[np.argmin(entropy_after_split)] 
         return gain, best_label
 
@@ -248,8 +262,6 @@ class Learner():
         '''        
         # for each axis x in X and each feature value in x calculate the
         # information gain
-        if type(Y_train[0]) == type('str'):
-            Y = (Y==Y[0])*2-1
         max_gain_per_axis = []
         best_feature_vals = []
         for axis in range(X.shape[1]):
@@ -271,9 +283,9 @@ class Learner():
         if not self.random_splits:
             axis, val = self.get_split(X,Y)
         else:
-            axis = self.feature_indices[np.random.randint(len(self.feature_indices))]
-            val = np.unique(X[:,axis])
-            val = val[np.random.randint(val.shape[0])]
+            split_gains, split_val = self.get_split_gains(X,Y)
+            axis = np.random.randint(len(split_gains))
+            val = split_val[axis]
         # give parameters to node
         cur_node.axis = axis
         cur_node.val = val
@@ -312,10 +324,8 @@ class Learner():
 
     def predict(self,x):
         self.n = self.root
-        depth = 0
         while not type(self.n) == LeafNode:
             self.n = self.n.decide(x)
-            depth+=1
         return self.n.label
 
 

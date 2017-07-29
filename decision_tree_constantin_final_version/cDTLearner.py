@@ -65,7 +65,7 @@ class ForestLearner():
 
     def __init__(self, X, Y, feature_types, feature_names = None,
                  n_trees = 12, max_depth = 10, features_per_tree = None,
-                 random_splits = False,
+                 random_splits = False, batch_size = None,
                  share_features = False, ratio_train = 0.7):
 
         self.trees = []
@@ -75,6 +75,10 @@ class ForestLearner():
         self.feature_types = feature_types
         self.share_features = share_features
         self.random_splits = random_splits
+        if not batch_size is None:
+            self.batch_size = batch_size
+        else:
+            self.batch_size = int(X.shape[0]/self.n_trees)*2
 
         # split training testing set
         idx = np.random.permutation(X.shape[0])
@@ -115,7 +119,8 @@ class ForestLearner():
                            random_splits = self.random_splits, 
                            feature_names = self.feature_names,
                            feature_indices = self.feature_indices_list[t])
-            tree.learn(X_train,Y_train,self.feature_types)
+            X_train_batch,Y_train_batch = self.batch(X_train,Y_train,size = self.batch_size)
+            tree.learn(X_train_batch,Y_train_batch,self.feature_types)
             Y_hat = [tree.predict(x) for x in X_test]
             self.output_trees.append(Y_hat)
             self.trees.append(tree)
@@ -130,11 +135,11 @@ class ForestLearner():
 
 
     def predict(self,x):
-        output_trees = []
+        self.output_trees = []
         for tree in self.trees:
-            output_trees.append(tree.predict(x))
-        output_trees = np.array(output_trees)
-        return self.forest.predict(output_trees)
+            self.output_trees.append(tree.predict(x))
+        self.output_trees = np.array(self.output_trees)
+        return self.forest.predict(self.output_trees)
 
     def predict_linear(self,x):
         output_trees = []
@@ -143,6 +148,18 @@ class ForestLearner():
         output_trees = np.array(output_trees)
 
         return (np.dot(output_trees.T,self.x_out)>0.)*2-1
+
+    def predict_vote(self,x):
+        output_trees = []
+        for tree in self.trees:
+            output_trees.append(tree.predict(x))
+        output_trees = np.sign(np.mean(output_trees))
+
+        return output_trees
+
+    def batch(self,X,Y,size):
+        idx = np.random.randint(X.shape[0],size=[size])
+        return X[idx,:],Y[idx]
 
 
 
@@ -165,6 +182,8 @@ class Learner():
             idx = [any(self.feature_indices == ix) for ix in range(X.shape[1])]
             idx = np.invert(idx)
             X[:,idx] = '0'
+        else:
+            self.feature_indices = np.arange(0,X.shape[1],1)
         self.feature_types = feature_types
         self.root = DecisionNode()
         self.build_tree(X,Y, self.root,0)
