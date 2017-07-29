@@ -178,7 +178,8 @@ class Learner():
 
     def learn(self,X,Y,feature_types):
         if self.feature_names is None:
-            self.feature_names = self.code_features(X)
+            #self.feature_names = self.code_features(X)
+            self.feature_names = ['a']*X.shape[1]
         if not self.feature_indices is None:
             idx = [any(self.feature_indices == ix) for ix in range(X.shape[1])]
             idx = np.invert(idx)
