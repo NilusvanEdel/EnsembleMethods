@@ -6,8 +6,10 @@ Created on Mon Jun 26 11:56:36 2017
 """
 from __future__ import division
 from stumpLearner import stumpLearner
+import cDTLearner as cDTL
 import numpy as np
 import threading
+import time
 from matplotlib import pyplot as plt
 class AdaBoost:
     
@@ -113,29 +115,53 @@ class AdaBoost:
         shape = int(np.sqrt(self.Y.shape[0]))
         Yplot = self.Y * beta
         plt.imshow(Yplot.reshape((shape,shape)))
+        #plot split axes
+        for j,l in enumerate(self.learners[0:i+1]):
+            split = l.split
+            if split[0] == 0:
+                plt.axhline(split[1],linewidth = 3,color = (0.3*j,0.3*j,0.3*j),label = "split "+str(j+1))
+            else:
+                plt.axvline(split[1],linewidth = 3,color = (0.3*j,0.3*j,0.3*j),label = "split "+str(j+1))
+        plt.legend()
+        if i == len(self.learners)-1:
+            plt.savefig("adaBoost2Dsplits.png")
 class BaggedLearner:
     
-    def __init__(self,X,Y,feature_types,feature_names=None,max_depth = 3,ensSize=10):
+    def __init__(self,X,Y,feature_types,feature_names=None,max_depth = 3,ensSize=10,random_splits = False):
         self.X = X
         self.Y = Y
         self.learners = []
         self.feature_types = feature_types
         self.feature_names = feature_names
         self.max_depth = max_depth
+        self.random_splits = random_splits
+        self.seed = 0
         threads = []
         for i in range(ensSize):
-            t = threading.Thread(target=self.learn)
+            t = threading.Thread(target=self.learn,args =(i,))
+            self.seed += 1
             t.start()
             threads.append(t)
-            print("started thread: ",i+1)
+            #print("started thread: ",i+1)
         for t in threads:
             t.join()
-            print("done")
+            #print("done")
             
-    def learn(self):
-
+    def learn(self,i):
+        #seed = np.random.randint(0,1000000)
+        np.random.seed(i)
         bagInd = self.drawBag()
-        l = Learner(self.X[bagInd],self.Y[bagInd],self.feature_types,self.feature_names,self.max_depth)
+        #get random features
+        if self.random_splits:
+            feat = np.arange(self.X[bagInd].shape[1])
+            feat = np.random.choice(feat,size=int(len(feat)/5 + 1),replace=False)
+            l = cDTL.Learner(max_depth = self.max_depth, random_splits = False, feature_names=self.feature_names)
+            l.learn(self.X[bagInd][:,feat],self.Y[bagInd],self.feature_types)
+        else:
+            l = cDTL.Learner(max_depth = self.max_depth, random_splits = False, feature_names=self.feature_names)
+
+            l.learn(self.X[bagInd],self.Y[bagInd],self.feature_types)
+
         self.learners.append(l)
 
     """

@@ -84,9 +84,9 @@ def one_hot(X,Y):
 
 
 #X, Y, feature_names,code = read_data(f_name = "mushroomsOneHot.csv")
-X, Y, feature_names,code = read_data(f_name = "wdbc.csv")
+#X, Y, feature_names,code = read_data(f_name = "wdbc.csv")
 #print(X.shape, Y.shape)
-#X, Y = read_image()
+X, Y = read_image()
 #best_features = [4,11,12,8]
 #worst_features = [x for x in np.arange(X.shape[1]) if not (x==best_features).any()]
 #X = X[:,worst_features]
@@ -95,7 +95,7 @@ X_train,Y_train,_,_,_,_ = split_sets(X,Y,ratio_train=1,ratio_test=0)
 _,_,X_test,Y_test,_,_ = split_sets(X,Y,ratio_train=0,ratio_test=1)
 #X_train,Y_train,X_test,Y_test,_,_ = split_sets(X,Y,ratio_train=0.7,ratio_test=0.3)
 print("generated Data")
-maxEnsSize = 30
+maxEnsSize = 4
 perfRes = np.zeros(maxEnsSize)
 for j,ensSize in enumerate(np.arange(maxEnsSize)+1):
     avgPerf = 0
