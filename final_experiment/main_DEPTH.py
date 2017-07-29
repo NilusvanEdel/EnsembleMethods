@@ -36,10 +36,10 @@ number of splits for the fern, or number of learners for boosting.
 
 performances = []
 
-max_depth = 1000
+max_depth = 20
 
 
-depth_spacing = np.arange(2,max_depth,50)
+depth_spacing = np.arange(1,max_depth,1)
 for depth in depth_spacing:
 	perf = []
 	print('depth: {0}'.format(depth))
@@ -48,13 +48,12 @@ for depth in depth_spacing:
 		X_train,Y_train,X_test,Y_test,X_vali,Y_vali = dataHandler.split_sets(X, Y, ratio_train=.7, ratio_test=.3, random_seed = iteration)
 
 		# PUT YOUR LEARNER HERE 
-		'''
 		tree = cDTL.Learner(max_depth = depth, feature_names = feature_names)
 		tree.learn(X_train,Y_train, feature_types)
 		Y_hat = [tree.predict(x) for x in X_test]
 		'''
-		'''
 		forest 
+		'''
 		'''
 		n_trees = depth
 		forest = cDTL.ForestLearner(X,Y, feature_types, 
@@ -62,6 +61,7 @@ for depth in depth_spacing:
 				batch_size = 5,
 				feature_names = feature_names)
 		Y_hat = [forest.predict(x) for x in X_test]
+		'''
 
 		perf.append(np.mean(Y_hat==Y_test))
 		print('		iteration: {0} | performance: {1}'.format(iteration+1,np.mean(Y_hat==Y_test)))
