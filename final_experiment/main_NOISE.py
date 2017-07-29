@@ -36,13 +36,13 @@ parameters for your learner.
 '''
 
 
+
 file_name = 'fern'
 extension = '_noise_'+data_set_name.split('.')[0]
 
 performances = []
 
 noise_spacing = np.logspace(0,1,10)-1
-
 for l in noise_spacing:
 	perf = []
 	print('noise level: {0}'.format(l))
@@ -68,14 +68,13 @@ for l in noise_spacing:
 		forest 
 		'''
 		'''
-		n_trees = 1000
+		n_trees = 200
 		forest = cDTL.ForestLearner(X,Y, feature_types, 
-				n_trees = n_trees, max_depth = 1, ensemble_tree_depth = 10,
+				n_trees = n_trees, max_depth = 1, ensemble_tree_depth = 7,
 				batch_size = 20,
 				feature_names = feature_names)
 		Y_hat = [forest.predict(x) for x in X_test]
 		'''
-
 		perf.append(np.mean(Y_hat==Y_test))
 		print('		iteration: {0} | performance: {1}'.format(iteration+1,np.mean(Y_hat==Y_test)))
 	performances.append(np.mean(perf))

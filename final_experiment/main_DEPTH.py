@@ -6,7 +6,7 @@ import matplotlib.pyplot as plt
 from os import listdir
 
 # 'wdbc.csv' / 'mushrooms.csv'
-data_set_name = 'wdbc.csv'
+data_set_name = 'mushrooms.csv'
 
 # load data
 X, Y, feature_names, codeing = dataHandler.read_data(f_name = data_set_name)
@@ -18,7 +18,6 @@ elif data_set_name == 'mushrooms.csv':
 else:
 	print('wrong dataset')
 	exit()
-
 
 
 
@@ -48,13 +47,13 @@ for depth in depth_spacing:
 	for iteration in range(20):
 		# split into training, testing, and validation sets
 		X_train,Y_train,X_test,Y_test,X_vali,Y_vali = dataHandler.split_sets(X, Y, ratio_train=.7, ratio_test=.3, random_seed = iteration)
-
 		# PUT YOUR LEARNER HERE
 		'''
 		tree = cDTL.Learner(max_depth = depth, feature_names = feature_names)
 		tree.learn(X_train,Y_train, feature_types)
 		Y_hat = [tree.predict(x) for x in X_test]
 		'''
+
 		# ferns
 		if (data_set_name == 'mushrooms.csv'):
 			ferny = fern.Fern(X_train, Y_train, depth, continuous=False)
@@ -67,12 +66,11 @@ for depth in depth_spacing:
 		'''
 		n_trees = depth
 		forest = cDTL.ForestLearner(X,Y, feature_types, 
-				n_trees = n_trees, max_depth = 1, ensemble_tree_depth = 10,
+				n_trees = n_trees, max_depth = 1, ensemble_tree_depth = int(np.log2(n_trees)),
 				batch_size = 5,
 				feature_names = feature_names)
 		Y_hat = [forest.predict(x) for x in X_test]
 		'''
-
 		perf.append(np.mean(Y_hat==Y_test))
 		print('		iteration: {0} | performance: {1}'.format(iteration+1,np.mean(Y_hat==Y_test)))
 	performances.append(np.mean(perf))
